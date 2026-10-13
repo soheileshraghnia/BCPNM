@@ -1,0 +1,78 @@
+# TEMPLATE - copy this file to start a model in a new domain.
+# Example domain: burnout at work (emotional exhaustion, cynicism, reduced efficacy;
+# exhaustion predicts turnover, Wright & Cropanzano, 1998). Illustrative rules, not estimates.
+#
+# Sections: meta (documentation), state_spaces (reusable state definitions), nodes,
+# model (edge-based Blume-Capel rules, optional), rules (explicit rule per node; overrides
+# model), dynamics (default simulation settings used by your scripts).
+
+meta:
+  name: burnout_template
+  domain: occupational health / burnout
+  description: Template showing every rule type; replace nodes, rules and parameters.
+  seed: 1                         # record the seed you use for simulations
+  version: 1                      # increment when you change the model
+  sources: "rules derived from ...; parameters elicited from ..."   # document provenance
+
+state_spaces:                     # define once, reuse for many nodes
+  level:
+    values: [0, 1, 2]             # integer codes in increasing order
+    labels: {0: low, 1: moderate, 2: high}
+  binary: boolean                 # presets: boolean (0/1), ternary (-1/0/+1)
+
+nodes:                            # one entry per node; 'initial' is optional
+  - {name: Workload,   states: level,  initial: 1, construct: "job demands", measurement: "e.g., workload scale, tertiles"}
+  - {name: Exhaustion, states: level,  initial: 0, construct: "emotional exhaustion"}
+  - {name: Recovery,   states: level,  initial: 2, construct: "psychological detachment after work"}
+  - {name: Cynicism,   states: level,  initial: 0, construct: "cynicism / depersonalization"}
+  - {name: Efficacy,   states: level,  initial: 2, construct: "professional efficacy"}
+  - {name: Turnover,   states: binary, initial: 0, construct: "intention to leave"}
+
+# Weighted threshold rules: activation = bias + sum(weight * input); outputs change at the
+# thresholds. Use weights in multiples of 0.1 and biases ending in 0.05 to avoid exact ties
+# (check with bcpnm.threshold_ties).
+rules:
+  Workload: {type: clamp, value: 1}                    # context; change it with interventions
+  Exhaustion:
+    type: threshold
+    weights: {Workload: 0.9, Exhaustion: 0.5, Recovery: -0.7}
+    bias: 0.45
+    thresholds: [0.5, 1.5]
+    outputs: [0, 1, 2]
+  Recovery:
+    type: threshold
+    weights: {Workload: -0.6, Exhaustion: -0.6, Recovery: 0.3}
+    bias: 1.85
+    thresholds: [0.5, 1.5]
+    outputs: [0, 1, 2]
+  Cynicism:
+    type: threshold
+    weights: {Exhaustion: 0.7, Cynicism: 0.4, Efficacy: -0.5}
+    bias: 0.65
+    thresholds: [0.5, 1.5]
+    outputs: [0, 1, 2]
+  Efficacy:
+    type: case                                         # multi-valued logic: first true case wins
+    cases:
+      - ["Exhaustion == 2 and Cynicism == 2", 0]
+      - ["Exhaustion >= 1 or Cynicism >= 1", 1]
+    default: 2
+  Turnover:
+    type: boolean
+    expr: "Exhaustion == 2 and Cynicism >= 1"
+    noise: 0.0                                         # >0 wraps any rule in random perturbation
+
+# Alternative for interpersonal networks with -1/0/+1 states: edge-based Blume-Capel rules
+# model:
+#   type: softmax
+#   beta: 1.0
+#   symmetric: true
+#   defaults: {delta: 0.3, h: 0.0, rho: 0.0}
+#   parameters: {h: {NodeA: 0.2}}
+#   edges:
+#     - {source: NodeA, target: NodeB, w: 0.6, lam: 0.4}
+
+dynamics:
+  scheme: synchronous             # synchronous | asynchronous | sequential
+  steps: 50
+  runs: 1000

@@ -1,0 +1,77 @@
+# Case Study 3 - Stigma and help-seeking as an intrapersonal construct network.
+# Multi-valued logical model: ordinal states 0 = low, 1 = moderate, 2 = high
+# (help-seeking behaviour is Boolean). Rules follow the progressive model of
+# self-stigma (Corrigan et al., 2009, 2011) and the "why try" effect.
+meta:
+  name: stigma_help_seeking
+  domain: mental-health stigma / help-seeking
+  description: >
+    Nodes are constructs within one person. Public stigma is a contextual input
+    that changes only through intervention. Rules are illustrative, theory-derived
+    threshold and logical rules, not estimates.
+  seed: 20261012
+  version: 1
+state_spaces:
+  level:
+    values: [0, 1, 2]
+    labels: {0: low, 1: moderate, 2: high}
+  act:
+    values: [0, 1]
+    labels: {0: no, 1: yes}
+nodes:
+  - {name: PublicStigma, states: level, initial: 1, construct: "perceived public stigma of mental illness"}
+  - {name: SelfStigma,   states: level, initial: 2, construct: "internalized (self-)stigma"}
+  - {name: SelfEsteem,   states: level, initial: 0, construct: "self-esteem and self-efficacy"}
+  - {name: Distress,     states: level, initial: 2, construct: "psychological distress"}
+  - {name: Support,      states: level, initial: 1, construct: "perceived social support"}
+  - {name: Intention,    states: level, initial: 0, construct: "intention to seek professional help"}
+  - {name: HelpSeeking,  states: act,   initial: 0, construct: "contact with professional help (behaviour)"}
+# Weights are multiples of 0.1 and biases end in 0.05, so no activation can fall exactly on a
+# cut point (0.5, 1.5); bcpnm.validation.threshold_ties() checks this.
+rules:
+  PublicStigma: {type: clamp, value: 1}   # context held at "moderate"; changed only by intervention
+  # awareness + agreement -> application: stigma is internalized when public stigma is
+  # not buffered by self-esteem or support; it is somewhat persistent, and contact
+  # with care reduces it
+  SelfStigma:
+    type: threshold
+    weights: {PublicStigma: 0.8, SelfStigma: 0.2, SelfEsteem: -0.6, Support: -0.5, HelpSeeking: -0.8}
+    bias: 1.35
+    thresholds: [0.5, 1.5]
+    outputs: [0, 1, 2]
+  # the "why try" effect: self-stigma lowers self-esteem; support and care raise it
+  SelfEsteem:
+    type: threshold
+    weights: {SelfStigma: -0.9, Support: 0.3, HelpSeeking: 0.5}
+    bias: 1.65
+    thresholds: [0.5, 1.5]
+    outputs: [0, 1, 2]
+  Distress:
+    type: threshold
+    weights: {SelfEsteem: -1.0, HelpSeeking: -0.9}
+    bias: 2.25
+    thresholds: [0.5, 1.5]
+    outputs: [0, 1, 2]
+  # secrecy and withdrawal erode support
+  Support:
+    type: threshold
+    weights: {SelfStigma: -0.8, HelpSeeking: 0.4}
+    bias: 1.85
+    thresholds: [0.5, 1.5]
+    outputs: [0, 1, 2]
+  # intention needs felt need and is blocked by strong self-stigma (first true case wins)
+  Intention:
+    type: case
+    cases:
+      - ["Distress == 0", 0]
+      - ["SelfStigma == 2", 0]
+      - ["SelfStigma == 0 or Support == 2", 2]
+    default: 1
+  # the intention-behaviour gap: a moderate intention is acted on only with strong support
+  HelpSeeking:
+    type: boolean
+    expr: "Intention == 2 or (Intention == 1 and Support == 2)"
+dynamics:
+  scheme: synchronous
+  steps: 40
+  runs: 2000

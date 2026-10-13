@@ -1,0 +1,42 @@
+# Case Study 1 - The conspiracy of silence around a young person's suicidal distress.
+# Equilibrium Blume-Capel PNM of a five-person support network (symmetric ties).
+# States: -1 = active concealment or denial, 0 = silence (non-disclosure), +1 = open acknowledgement.
+meta:
+  name: conspiracy_of_silence_family
+  domain: suicidology / family communication
+  description: >
+    Persons are nodes. K (w) couples the polarity of what tied persons say; Lambda (lam)
+    makes silence self-reinforcing when both ends of a tie are silent. Parameters are
+    illustrative values for teaching, not estimates.
+  seed: 20261012
+  version: 1
+state_spaces:
+  talk:
+    values: [-1, 0, 1]
+    labels: {-1: conceal, 0: silent, 1: acknowledge}
+nodes:
+  - {name: Adolescent, states: talk, initial: 0,  construct: "young person's disclosure of suicidal thoughts"}
+  - {name: Mother,     states: talk, initial: 0,  construct: "mother's talk about the young person's distress"}
+  - {name: Father,     states: talk, initial: -1, construct: "father's talk about the young person's distress"}
+  - {name: Sibling,    states: talk, initial: 0,  construct: "sibling's talk about the young person's distress"}
+  - {name: Friend,     states: talk, initial: 1,  construct: "close friend's talk about the young person's distress"}
+model:
+  type: softmax          # Blume-Capel transition rule for every node
+  beta: 1.0              # concentration (inverse noise)
+  symmetric: true        # undirected ties -> equilibrium model under asynchronous updating
+  defaults: {rho: 0.0}
+  parameters:
+    h:     {Adolescent: -0.2, Mother: -0.1, Father: -0.5, Sibling: 0.0, Friend: 0.4}   # openness field
+    delta: {Adolescent: 0.6,  Mother: 0.5,  Father: 0.3,  Sibling: 0.7, Friend: 0.2}   # cost of speaking
+  edges:
+    - {source: Adolescent, target: Mother,  w: 0.6, lam: 0.5}
+    - {source: Adolescent, target: Father,  w: 0.4, lam: 0.3}
+    - {source: Adolescent, target: Sibling, w: 0.5, lam: 0.6}
+    - {source: Adolescent, target: Friend,  w: 0.8, lam: 0.2}
+    - {source: Mother,     target: Father,  w: 0.7, lam: 0.4}
+    - {source: Mother,     target: Sibling, w: 0.5, lam: 0.5}
+    - {source: Sibling,    target: Friend,  w: 0.3, lam: 0.2}
+dynamics:
+  scheme: asynchronous
+  steps: 400
+  runs: 2000

@@ -1,0 +1,58 @@
+# Case Study 2 - Organizational silence in a two-team work unit (Morrison & Milliken, 2000).
+# Directed Blume-Capel transition model: strong downward influence, weak upward influence.
+# States: -1 = endorse the status quo / deny the problem, 0 = silence, +1 = voice (raise the problem).
+meta:
+  name: organizational_silence
+  domain: organizational behaviour / employee voice
+  description: >
+    A manager, two team leads and four employees. Influence flows mainly downward;
+    silence is contagious among peers (zero-zero coordination). Parameters are
+    illustrative values for teaching, not estimates.
+  seed: 20261012
+  version: 1
+state_spaces:
+  voice:
+    values: [-1, 0, 1]
+    labels: {-1: endorse status quo, 0: silent, 1: voice}
+nodes:
+  - {name: Manager, states: voice, construct: "manager's public stance on a known problem"}
+  - {name: LeadA,   states: voice, construct: "team lead A's stance"}
+  - {name: LeadB,   states: voice, construct: "team lead B's stance"}
+  - {name: EmpA1,   states: voice, construct: "employee stance (team A)"}
+  - {name: EmpA2,   states: voice, construct: "employee stance (team A)"}
+  - {name: EmpB1,   states: voice, construct: "employee stance (team B)"}
+  - {name: EmpB2,   states: voice, construct: "employee stance (team B)"}
+model:
+  type: softmax
+  beta: 1.5
+  symmetric: false       # directed influence: w and lam are 'source -> target'
+  defaults: {h: 0.0, delta: 0.4, rho: 0.2}
+  parameters:
+    h:     {Manager: -0.3}                       # managerial aversion to negative feedback
+    delta: {Manager: 0.0, LeadA: 0.3, LeadB: 0.3} # employees pay the highest cost for speaking
+  edges:
+    # downward (strong)
+    - {source: Manager, target: LeadA, w: 1.0, lam: 0.3}
+    - {source: Manager, target: LeadB, w: 1.0, lam: 0.3}
+    - {source: LeadA, target: EmpA1, w: 0.8, lam: 0.3}
+    - {source: LeadA, target: EmpA2, w: 0.8, lam: 0.3}
+    - {source: LeadB, target: EmpB1, w: 0.8, lam: 0.3}
+    - {source: LeadB, target: EmpB2, w: 0.8, lam: 0.3}
+    # upward (weak)
+    - {source: LeadA, target: Manager, w: 0.2, lam: 0.0}
+    - {source: LeadB, target: Manager, w: 0.2, lam: 0.0}
+    - {source: EmpA1, target: LeadA, w: 0.3, lam: 0.0}
+    - {source: EmpA2, target: LeadA, w: 0.3, lam: 0.0}
+    - {source: EmpB1, target: LeadB, w: 0.3, lam: 0.0}
+    - {source: EmpB2, target: LeadB, w: 0.3, lam: 0.0}
+    # peers (silence spreads among peers)
+    - {source: EmpA1, target: EmpA2, w: 0.4, lam: 0.6}
+    - {source: EmpA2, target: EmpA1, w: 0.4, lam: 0.6}
+    - {source: EmpB1, target: EmpB2, w: 0.4, lam: 0.6}
+    - {source: EmpB2, target: EmpB1, w: 0.4, lam: 0.6}
+    - {source: LeadA, target: LeadB, w: 0.3, lam: 0.3}
+    - {source: LeadB, target: LeadA, w: 0.3, lam: 0.3}
+dynamics:
+  scheme: asynchronous
+  steps: 300
+  runs: 2000

@@ -1,0 +1,14 @@
+cff-version: 1.2.0
+message: "If you use bcpnm, please cite the tutorial paper and the software."
+title: "bcpnm: Blume–Capel probabilistic network modeling for psychological systems"
+version: 0.1.0
+date-released: 2026-10-12
+license: MIT
+authors:
+  - name: "The bcpnm authors"
+repository-code: "https://github.com/YOUR-ORG/bcpnm"
+keywords:
+  - network psychometrics
+  - Boolean networks
+  - Blume-Capel model
+  - attractors
